@@ -1,5 +1,6 @@
 package com.krillinator.Enterprise_Lektion_6_Spring_Security_Intro.config;
 
+import com.krillinator.Enterprise_Lektion_6_Spring_Security_Intro.authorities.UserRole;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +19,12 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableWebSecurity
 public class AppSecurityConfig {
 
+    private final AppPasswordConfig bcrypt;
+
+    public AppSecurityConfig(AppPasswordConfig bcrypt) {
+        this.bcrypt = bcrypt;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -27,12 +34,14 @@ public class AppSecurityConfig {
         // TODO - Question - Why doesn't ("/login").permitAll() <-- work?
         // TODO - Question - FormLogin.html, where is /login?
         // TODO - Question - Do you want this class in .gitignore?
+        // TODO . QUESTION #8 - Bean alternative to autowired
 
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/api/**").permitAll()
+                        .requestMatchers("/", "/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
-                        .requestMatchers("/test").hasRole("ADMIN")
+                        .requestMatchers("/admin").hasRole(UserRole.ADMIN.name())
+                        .requestMatchers("/user").hasRole(UserRole.USER.name())
                         .anyRequest()
                         .authenticated()
                 )
@@ -44,10 +53,10 @@ public class AppSecurityConfig {
     // DEBUG USER -
     @Bean
     public UserDetailsService userDetailsService() {
-        UserDetails user = User
-                .withDefaultPasswordEncoder()
+        UserDetails user = User.builder()
                 .username("benny")
-                .password("123")
+                .password(bcrypt.bcryptPasswordEncoder().encode("123"))
+                .authorities(UserRole.USER.getAuthorities())  // ROLE + PERMISSIONS
                 .build();
 
         return new InMemoryUserDetailsManager(user);
